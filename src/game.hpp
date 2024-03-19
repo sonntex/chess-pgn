@@ -128,7 +128,7 @@ private:
   std::array<std::array<cache_t, 3>, 2> cached_pieces_;
 };
 
-game::board_t make_default_board();
+game::board_t make_board();
 game::board_t make_board(const std::string& s);
 
 extern game g;

@@ -14,9 +14,9 @@
 
 namespace chess {
 
-game::board_t make_default_board()
+game::board_t make_board()
 {
-  game::board_t res = {{
+  return {{
       //  a     b     c     d     e     f     g     h
       {{"wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"}}, // 1
       {{"wP", "wP", "wP", "wP", "wP", "wP", "wP", "wP"}}, // 2
@@ -27,7 +27,6 @@ game::board_t make_default_board()
       {{"bP", "bP", "bP", "bP", "bP", "bP", "bP", "bP"}}, // 7
       {{"bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"}}  // 8
     }};
-  return res;
 }
 
 game::board_t make_board(const std::string& s)
@@ -112,7 +111,7 @@ void game::init()
   ++game_number_;
   turn_number_ = 0;
   color_ = defs::black;
-  board_ = make_default_board();
+  board_ = make_board();
   cached_pieces_[cw][pr] = {{0, 0}, {0, 7}};
   cached_pieces_[cb][pr] = {{7, 0}, {7, 7}};
   cached_pieces_[cw][pb] = {{0, 2}, {0, 5}};
