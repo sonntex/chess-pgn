@@ -21,7 +21,7 @@
 <MOVE>"1/2-1/2"             { BEGIN(INITIAL); return TOKEN_DRAW; }
 <MOVE><<EOF>>               { BEGIN(INITIAL); return TOKEN_SPACE; }
 <MOVE>[ \t\n]+              { return TOKEN_SPACE; }
-<MOVE>"{"[^}]*"}"[ \t\n]    { /* ignore spaces */ }
+<MOVE>"{"[^}]*"}"[ \t\n]    { /* ignore everything inside comment and next space */ }
 <MOVE>"O-O-O"               { return TOKEN_CASTLE_QUEEN; }
 <MOVE>"O-O"                 { return TOKEN_CASTLE_KING; }
 <MOVE>[KQRBN]               { yylval.c = yytext[0]; return TOKEN_PIECE; }
