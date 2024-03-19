@@ -64,6 +64,36 @@ inline bool valid_col(char col) { return col >= 'a' && col <= 'h'; }
 inline int row_to_index(char row) { return row - '1'; }
 inline bool valid_row(char row) { return row >= '1' && row <= '8'; }
 
+inline constexpr int color_to_index(char color)
+{
+  switch (color) {
+  case defs::white:
+    return 0;
+  case defs::black:
+    return 1;
+  }
+  return -1;
+}
+
+inline constexpr int piece_to_index(char piece)
+{
+  switch (piece) {
+  case defs::rook:
+    return 0;
+  case defs::bishop:
+    return 1;
+  case defs::queen:
+    return 2;
+  }
+  return -1;
+}
+
+constexpr int cw = color_to_index(defs::white);
+constexpr int cb = color_to_index(defs::black);
+constexpr int pr = piece_to_index(defs::rook);
+constexpr int pb = piece_to_index(defs::bishop);
+constexpr int pq = piece_to_index(defs::queen);
+
 } // namespace
 
 game::game()
@@ -84,12 +114,12 @@ void game::init()
   color_ = defs::black;
   board_ = make_default_board();
   cached_pieces_.resize(2);
-  cached_pieces_[0].rooks   = {{0, 0}, {0, 7}};
-  cached_pieces_[1].rooks   = {{7, 0}, {7, 7}};
-  cached_pieces_[0].bishops = {{0, 2}, {0, 5}};
-  cached_pieces_[1].bishops = {{7, 2}, {7, 5}};
-  cached_pieces_[0].queens  = {{0, 3}};
-  cached_pieces_[1].queens  = {{7, 3}};
+  cached_pieces_[cw][pr] = {{0, 0}, {0, 7}};
+  cached_pieces_[cb][pr] = {{7, 0}, {7, 7}};
+  cached_pieces_[cw][pb] = {{0, 2}, {0, 5}};
+  cached_pieces_[cb][pb] = {{7, 2}, {7, 5}};
+  cached_pieces_[cw][pq] = {{0, 3}};
+  cached_pieces_[cb][pq] = {{7, 3}};
 }
 
 void game::init(char color, board_t board)
@@ -104,29 +134,15 @@ void game::init(char color, board_t board)
     for (int j = 0; j <= 7; ++j) {
       char color = board_.at(i).at(j).at(0); // throw exception
       char piece = board_.at(i).at(j).at(1); // throw exception
-      auto& cached_pieces = cached_pieces_[color == defs::white ? 0 : 1];
-      switch (piece) {
-      case defs::rook:
+      int ci = color_to_index(color);
+      int pi = piece_to_index(piece);
+      if (pi >= 0) {
+        auto& cache = cached_pieces_[ci][pi];
 #if defined(CHESS_OPT_SET) || defined(CHESS_OPT_UNORDERED_SET)
-        cached_pieces.rooks.insert({i, j});
+        cache.insert({i, j});
 #else
-        cached_pieces.rooks.push_back({i, j});
+        cache.push_back({i, j});
 #endif
-        break;
-      case defs::bishop:
-#if defined(CHESS_OPT_SET) || defined(CHESS_OPT_UNORDERED_SET)
-        cached_pieces.bishops.insert({i, j});
-#else
-        cached_pieces.bishops.push_back({i, j});
-#endif
-        break;
-      case defs::queen:
-#if defined(CHESS_OPT_SET) || defined(CHESS_OPT_UNORDERED_SET)
-        cached_pieces.queens.insert({i, j});
-#else
-        cached_pieces.queens.push_back({i, j});
-#endif
-        break;
       }
     }
   }
@@ -223,29 +239,15 @@ void game::promo(char piece)
       std::format("!!! {}. promote '{}{}'\n", turn_number_, color_, piece);
   );
   // no sanity checks!
-  auto& cached_pieces = cached_pieces_[cache_];
-  switch (piece) {
-  case defs::rook:
+  int ci = color_to_index(color_);
+  int pi = piece_to_index(piece);
+  if (pi >= 0) {
+    auto& cache = cached_pieces_[ci][pi];
 #if defined(CHESS_OPT_SET) || defined(CHESS_OPT_UNORDERED_SET)
-    cached_pieces.rooks.insert({li, lj});
+    cache.insert({li, lj});
 #else
-    cached_pieces.rooks.push_back({li, lj});
+    cache.push_back({li, lj});
 #endif
-    break;
-  case defs::bishop:
-#if defined(CHESS_OPT_SET) || defined(CHESS_OPT_UNORDERED_SET)
-    cached_pieces.bishops.insert({li, lj});
-#else
-    cached_pieces.bishops.push_back({li, lj});
-#endif
-    break;
-  case defs::queen:
-#if defined(CHESS_OPT_SET) || defined(CHESS_OPT_UNORDERED_SET)
-    cached_pieces.queens.insert({li, lj});
-#else
-    cached_pieces.queens.push_back({li, lj});
-#endif
-    break;
   }
   board_[li][lj][1] = piece;
 }
@@ -325,13 +327,9 @@ void game::switch_turn(char piece)
     ++turn_number_;
     color_ = defs::white;
     opponent_color_ = defs::black;
-    cache_ = 0;
-    opponent_cache_ = 1;
   } else {
     color_ = defs::black;
     opponent_color_ = defs::white;
-    cache_ = 1;
-    opponent_cache_ = 0;
   }
   piece_ = piece;
 }
@@ -340,79 +338,34 @@ void game::update(char color, char piece, char capture, int di, int dj, int si, 
 {
   // no sanity checks!
   if (capture == defs::capture) {
+    char color = board_[di][dj][0];
     char piece = board_[di][dj][1];
-    auto& cached_pieces = cached_pieces_[opponent_cache_];
-    switch (piece) {
-    case defs::rook:
+    int ci = color_to_index(color);
+    int pi = piece_to_index(piece);
+    if (pi >= 0) {
+      auto& cache = cached_pieces_[ci][pi];
 #if defined(CHESS_OPT_SET) || defined(CHESS_OPT_UNORDERED_SET)
-      cached_pieces.rooks.erase({di, dj});
+      cache.erase({di, dj});
 #else
-      cached_pieces.rooks.erase(
-          std::remove(std::begin(cached_pieces.rooks), std::end(cached_pieces.rooks),
-              std::make_pair(di, dj)),
-          std::end(cached_pieces.rooks));
+      cache.erase(
+          std::remove(std::begin(cache), std::end(cache), std::make_pair(di, dj)),
+          std::end(cache));
 #endif
-      break;
-    case defs::bishop:
-#if defined(CHESS_OPT_SET) || defined(CHESS_OPT_UNORDERED_SET)
-      cached_pieces.bishops.erase({di, dj});
-#else
-      cached_pieces.bishops.erase(
-          std::remove(std::begin(cached_pieces.bishops), std::end(cached_pieces.bishops),
-              std::make_pair(di, dj)),
-          std::end(cached_pieces.bishops));
-#endif
-      break;
-    case defs::queen:
-#if defined(CHESS_OPT_SET) || defined(CHESS_OPT_UNORDERED_SET)
-      cached_pieces.queens.erase({di, dj});
-#else
-      cached_pieces.queens.erase(
-          std::remove(std::begin(cached_pieces.queens), std::end(cached_pieces.queens),
-              std::make_pair(di, dj)),
-          std::end(cached_pieces.queens));
-#endif
-      break;
     }
   }
-  auto& cached_pieces = cached_pieces_[cache_];
-  switch (piece) {
-  case defs::rook:
+  int ci = color_to_index(color);
+  int pi = piece_to_index(piece);
+  if (pi >= 0) {
+    auto& cache = cached_pieces_[ci][pi];
 #if defined(CHESS_OPT_SET) || defined(CHESS_OPT_UNORDERED_SET)
-    cached_pieces.rooks.erase({si, sj});
-    cached_pieces.rooks.insert({di, dj});
+    cache.erase({si, sj});
+    cache.insert({di, dj});
 #else
-    cached_pieces.rooks.erase(
-        std::remove(std::begin(cached_pieces.rooks), std::end(cached_pieces.rooks),
-            std::make_pair(si, sj)),
-        std::end(cached_pieces.rooks));
-    cached_pieces.rooks.push_back({di, dj});
+    cache.erase(
+        std::remove(std::begin(cache), std::end(cache), std::make_pair(si, sj)),
+        std::end(cache));
+    cache.push_back({di, dj});
 #endif
-    break;
-  case defs::bishop:
-#if defined(CHESS_OPT_SET) || defined(CHESS_OPT_UNORDERED_SET)
-    cached_pieces.bishops.erase({si, sj});
-    cached_pieces.bishops.insert({di, dj});
-#else
-    cached_pieces.bishops.erase(
-        std::remove(std::begin(cached_pieces.bishops), std::end(cached_pieces.bishops),
-            std::make_pair(si, sj)),
-        std::end(cached_pieces.bishops));
-    cached_pieces.bishops.push_back({di, dj});
-#endif
-    break;
-  case defs::queen:
-#if defined(CHESS_OPT_SET) || defined(CHESS_OPT_UNORDERED_SET)
-    cached_pieces.queens.erase({si, sj});
-    cached_pieces.queens.insert({di, dj});
-#else
-    cached_pieces.queens.erase(
-        std::remove(std::begin(cached_pieces.queens), std::end(cached_pieces.queens),
-            std::make_pair(si, sj)),
-        std::end(cached_pieces.queens));
-    cached_pieces.queens.push_back({di, dj});
-#endif
-    break;
   }
   board_[si][sj][0] = defs::whitespace;
   board_[si][sj][1] = defs::whitespace;
@@ -778,7 +731,10 @@ bool game::find_pawn(char srow, char scol, int di, int dj, int& si, int& sj) con
 
 bool game::find_rook(char srow, char scol, int di, int dj, int& si, int& sj) const
 {
-  return find_ncross(srow, scol, di, dj, si, sj, cached_pieces_[cache_].rooks);
+  int ci = color_to_index(color_);
+  int pi = piece_to_index(piece_);
+  auto& cache = cached_pieces_[ci][pi];
+  return find_ncross(srow, scol, di, dj, si, sj, cache);
 }
 
 bool game::find_knight(char srow, char scol, int di, int dj, int& si, int& sj) const
@@ -791,13 +747,19 @@ bool game::find_knight(char srow, char scol, int di, int dj, int& si, int& sj) c
 
 bool game::find_bishop(char srow, char scol, int di, int dj, int& si, int& sj) const
 {
-  return find_xcross(srow, scol, di, dj, si, sj, cached_pieces_[cache_].bishops);
+  int ci = color_to_index(color_);
+  int pi = piece_to_index(piece_);
+  auto& cache = cached_pieces_[ci][pi];
+  return find_xcross(srow, scol, di, dj, si, sj, cache);
 }
 
 bool game::find_queen(char srow, char scol, int di, int dj, int& si, int& sj) const
 {
-  return find_ncross(srow, scol, di, dj, si, sj, cached_pieces_[cache_].queens) ||
-         find_xcross(srow, scol, di, dj, si, sj, cached_pieces_[cache_].queens);
+  int ci = color_to_index(color_);
+  int pi = piece_to_index(piece_);
+  auto& cache = cached_pieces_[ci][pi];
+  return find_ncross(srow, scol, di, dj, si, sj, cache) ||
+         find_xcross(srow, scol, di, dj, si, sj, cache);
 }
 
 bool game::find_king(char srow, char scol, int di, int dj, int& si, int& sj) const

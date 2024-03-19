@@ -125,16 +125,7 @@ private:
 
   board_t board_;
 
-  struct combined_cache
-  {
-    cache_t rooks;
-    cache_t bishops;
-    cache_t queens;
-  };
-
-  std::vector<combined_cache> cached_pieces_;
-  size_t cache_{1};
-  size_t opponent_cache_{0};
+  std::vector<std::array<cache_t, 3>> cached_pieces_;
 };
 
 game::board_t make_default_board();
