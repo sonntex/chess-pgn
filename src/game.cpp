@@ -113,7 +113,6 @@ void game::init()
   turn_number_ = 0;
   color_ = defs::black;
   board_ = make_default_board();
-  cached_pieces_.resize(2);
   cached_pieces_[cw][pr] = {{0, 0}, {0, 7}};
   cached_pieces_[cb][pr] = {{7, 0}, {7, 7}};
   cached_pieces_[cw][pb] = {{0, 2}, {0, 5}};
@@ -129,7 +128,6 @@ void game::init(char color, board_t board)
   turn_number_ = 0;
   color_ = color;
   board_ = std::move(board);
-  cached_pieces_.resize(2);
   for (int i = 0; i <= 7; ++i) {
     for (int j = 0; j <= 7; ++j) {
       char color = board_.at(i).at(j).at(0); // throw exception

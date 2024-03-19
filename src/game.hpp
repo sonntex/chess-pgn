@@ -125,7 +125,7 @@ private:
 
   board_t board_;
 
-  std::vector<std::array<cache_t, 3>> cached_pieces_;
+  std::array<std::array<cache_t, 3>, 2> cached_pieces_;
 };
 
 game::board_t make_default_board();
